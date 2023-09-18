@@ -2,6 +2,7 @@
 
 from django.db import models
 from django.utils import timezone
+from django.utils.text import slugify
 from django.contrib.auth.models import User
 from django.urls import reverse
 from taggit.managers import TaggableManager
@@ -19,7 +20,10 @@ class Post(models.Model):
         PUBLISHED = 'PB', 'Published'
 
     title = models.CharField(max_length=250)
-    slug = models.SlugField(max_length=250, unique_for_date='publish')
+    slug = models.SlugField(max_length=250,
+                            unique_for_date='publish',
+                            # db_index=True   #если поиск только по слагу, в нашем случае индекс по дате
+                            )
     body = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blog_posts')
     publish = models.DateTimeField(default=timezone.now)
@@ -46,6 +50,11 @@ class Post(models.Model):
                                                  self.publish.month,
                                                  self.publish.day,
                                                  self.slug])
+
+    def save(self, *args, **kwargs):   #авто заполнение через админку, указано в admin.py. Тут на случай создания поста юзером(на будущее)
+        if not self.slug:
+            self.slug = slugify(self.title)
+        return super().save(*args, **kwargs)
 
 
 class Comment(models.Model):
